@@ -2,6 +2,33 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <cstring>
+#include <cstdlib> // Для функции atof
+#include <sstream> // Для работы с потоками
+
+// Функция для вычисления выражения
+double calculateExpression(const std::string& expression) {
+    std::istringstream iss(expression);
+    double num1, num2;
+    char op;
+    iss >> num1 >> op >> num2;
+    switch(op) {
+        case '+':
+            return num1 + num2;
+        case '-':
+            return num1 - num2;
+        case '*':
+            return num1 * num2;
+        case '/':
+            if(num2 != 0) {
+                return num1 / num2;
+            } else {
+                return 0; // Обработка деления на ноль
+            }
+        default:
+            return 0; // Обработка некорректного оператора
+    }
+}
 
 int main() {
     int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -37,6 +64,26 @@ int main() {
 
         std::cout << "Client connected" << std::endl;
 
+        // Принимаем запрос от клиента
+        char buffer[1024] = {0};
+        int bytesRead = read(clientSocket, buffer, sizeof(buffer));
+        if (bytesRead == -1) {
+            std::cerr << "Error reading from socket" << std::endl;
+            close(clientSocket);
+            continue;
+        }
+
+        // Вычисляем результат выражения
+        std::string expression(buffer);
+        double result = calculateExpression(expression);
+
+        // Отправляем результат обратно клиенту
+        std::ostringstream oss;
+        oss << "Result: " << result;
+        std::string resultMsg = oss.str();
+        write(clientSocket, resultMsg.c_str(), resultMsg.length());
+
+        // Закрываем соединение
         close(clientSocket);
     }
 

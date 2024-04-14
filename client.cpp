@@ -23,9 +23,13 @@ int main() {
 
     std::cout << "Connected to server" << std::endl;
 
+    // Ввод запроса
+    std::string expression;
+    std::cout << "Enter an expression (e.g., 10 + 5): ";
+    std::getline(std::cin, expression);
+
     // Отправка запроса
-    const char *request = "10 + 5";
-    write(clientSocket, request, strlen(request));
+    write(clientSocket, expression.c_str(), expression.length());
 
     // Получение ответа
     char buffer[1024] = {0};
@@ -35,7 +39,7 @@ int main() {
         return 1;
     }
 
-    std::cout << "Result: " << buffer << std::endl;
+    std::cout << "Server response: " << buffer << std::endl;
 
     // Закрытие соединения
     close(clientSocket);

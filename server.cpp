@@ -1,93 +1,124 @@
 #include <iostream>
+#include <thread>
+#include <cstring>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
-#include <cstring>
-#include <cstdlib> // Для функции atof
-#include <sstream> // Для работы с потоками
+#include <vector>
+#include <sstream>
+#include <sqlite3.h>
 
-// Функция для вычисления выражения
-double calculateExpression(const std::string& expression) {
-    std::istringstream iss(expression);
-    double num1, num2;
-    char op;
-    iss >> num1 >> op >> num2;
-    switch(op) {
-        case '+':
-            return num1 + num2;
-        case '-':
-            return num1 - num2;
-        case '*':
-            return num1 * num2;
-        case '/':
-            if(num2 != 0) {
-                return num1 / num2;
-            } else {
-                return 0; // Обработка деления на ноль
+// Структура для хранения запроса и ответа
+struct Query {
+    std::string expression;
+    std::string result;
+};
+
+// Функция обработки запроса на сервере
+void handle_request(int client_socket, sqlite3* db) {
+    char buffer[1024] = {0};
+    recv(client_socket, buffer, 1024, 0);
+    std::string request(buffer);
+
+    // Проверяем тип запроса
+    if (request == "GET_HISTORY") {
+        // Получаем историю запросов клиента
+        std::string client_history_query = "SELECT expression, result FROM queries;";
+        sqlite3_stmt *stmt;
+        std::stringstream response;
+        if (sqlite3_prepare_v2(db, client_history_query.c_str(), -1, &stmt, NULL) == SQLITE_OK) {
+            while (sqlite3_step(stmt) == SQLITE_ROW) {
+                const unsigned char *expression = sqlite3_column_text(stmt, 0);
+                const unsigned char *result = sqlite3_column_text(stmt, 1);
+                response << expression << ": " << result << std::endl;
             }
-        default:
-            return 0; // Обработка некорректного оператора
+            sqlite3_finalize(stmt);
+        } else {
+            response << "Error retrieving history.";
+        }
+
+        // Отправляем историю клиенту
+        std::string response_str = response.str();
+        send(client_socket, response_str.c_str(), response_str.length(), 0);
+    } else {
+        // Выполнение вычислений
+        std::string expression = request;
+        // Предполагаем, что здесь будет код для вычисления выражения
+
+        // Сохранение запроса и результата в базу данных
+        Query query;
+        query.expression = expression;
+        query.result = "result"; // Замените это на фактический результат
+
+        // Вставка запроса и результата в базу данных
+        std::stringstream ss;
+        ss << "INSERT INTO queries (expression, result) VALUES ('" << query.expression << "', '" << query.result << "');";
+        std::string sql = ss.str();
+        sqlite3_exec(db, sql.c_str(), NULL, 0, NULL);
+
+        // Отправка результата клиенту
+        send(client_socket, query.result.c_str(), query.result.length(), 0);
     }
+
+    close(client_socket);
 }
 
 int main() {
-    int serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (serverSocket == -1) {
-        std::cerr << "Error creating socket" << std::endl;
-        return 1;
+    int server_socket;
+    struct sockaddr_in address;
+    int opt = 1;
+    int addrlen = sizeof(address);
+
+    // Создание сокета сервера
+    if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+        perror("socket failed");
+        exit(EXIT_FAILURE);
     }
 
-    sockaddr_in serverAddr;
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_addr.s_addr = INADDR_ANY;
-    serverAddr.sin_port = htons(1234);
-    if (bind(serverSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) == -1) {
-        std::cerr << "Error binding socket" << std::endl;
-        return 1;
+    // Настройка параметров сокета
+    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
+    }
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(8080);
+
+    // Привязка сокета к адресу и порту
+    if (bind(server_socket, (struct sockaddr *)&address, sizeof(address)) < 0) {
+        perror("bind failed");
+        exit(EXIT_FAILURE);
     }
 
-    if (listen(serverSocket, 5) == -1) {
-        std::cerr << "Error listening on socket" << std::endl;
-        return 1;
+    // Прослушивание сокета
+    if (listen(server_socket, 3) < 0) {
+        perror("listen");
+        exit(EXIT_FAILURE);
     }
 
-    std::cout << "Server listening on port 1234..." << std::endl;
+    // Подключение к базе данных SQLite
+    sqlite3* db;
+    if (sqlite3_open("queries.db", &db)) {
+        std::cerr << "Can't open database: " << sqlite3_errmsg(db) << std::endl;
+        return 0;
+    }
+
+    // Создание таблицы для хранения запросов, если её ещё нет
+    std::string create_table_query = "CREATE TABLE IF NOT EXISTS queries (id INTEGER PRIMARY KEY AUTOINCREMENT, expression TEXT, result TEXT);";
+    sqlite3_exec(db, create_table_query.c_str(), NULL, 0, NULL);
 
     while (true) {
-        sockaddr_in clientAddr;
-        socklen_t clientAddrLen = sizeof(clientAddr);
-        int clientSocket = accept(serverSocket, (struct sockaddr *)&clientAddr, &clientAddrLen);
-        if (clientSocket == -1) {
-            std::cerr << "Error accepting connection" << std::endl;
-            continue;
+        int client_socket;
+        // Принятие нового подключения
+        if ((client_socket = accept(server_socket, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
+            perror("accept");
+            exit(EXIT_FAILURE);
         }
 
-        std::cout << "Client connected" << std::endl;
-
-        // Принимаем запрос от клиента
-        char buffer[1024] = {0};
-        int bytesRead = read(clientSocket, buffer, sizeof(buffer));
-        if (bytesRead == -1) {
-            std::cerr << "Error reading from socket" << std::endl;
-            close(clientSocket);
-            continue;
-        }
-
-        // Вычисляем результат выражения
-        std::string expression(buffer);
-        double result = calculateExpression(expression);
-
-        // Отправляем результат обратно клиенту
-        std::ostringstream oss;
-        oss << "Result: " << result;
-        std::string resultMsg = oss.str();
-        write(clientSocket, resultMsg.c_str(), resultMsg.length());
-
-        // Закрываем соединение
-        close(clientSocket);
+        // Создание нового потока для обработки запроса
+        std::thread(handle_request, client_socket, db).detach();
     }
 
-    close(serverSocket);
-
+    sqlite3_close(db);
     return 0;
 }

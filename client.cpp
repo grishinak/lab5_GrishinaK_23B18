@@ -122,20 +122,26 @@ int main() {
     }
 
     std::string command;
-    std::cout << "Enter algebraic expression or type 'history' to view your history: ";
-    std::getline(std::cin, command);
+    while (true) {
+        std::cout << "Enter algebraic expression, 'history' to view your history, or 'exit' to quit: ";
+        std::getline(std::cin, command);
 
-    if (command == "history") {
-        // Отправляем запрос на получение истории
-        send_request(client_socket, "GET_HISTORY");
-    } else {
-        // Вычисляем выражение
-        double result = evaluate_expression(command);
-        if (!std::isnan(result)) {
-            std::cout << "Result: " << result << std::endl;
+        if (command == "exit") {
+            // Отправляем команду на отключение и выходим из цикла
+            send_request(client_socket, "EXIT");
+            break;
+        } else if (command == "history") {
+            // Отправляем запрос на получение истории
+            send_request(client_socket, "GET_HISTORY");
+        } else {
+            // Вычисляем выражение
+            double result = evaluate_expression(command);
+            if (!std::isnan(result)) {
+                std::cout << "Result: " << result << std::endl;
 
-            // Отправляем выражение серверу
-            send_request(client_socket, command);
+                // Отправляем выражение серверу
+                send_request(client_socket, command);
+            }
         }
     }
 

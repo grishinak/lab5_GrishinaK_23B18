@@ -7,6 +7,7 @@
 #include <vector>
 #include <sstream>
 #include <sqlite3.h>
+#include "parser.h"
 
 // Структура для хранения запроса и ответа
 struct Query {
@@ -43,12 +44,12 @@ void handle_request(int client_socket, sqlite3* db) {
     } else {
         // Выполнение вычислений
         std::string expression = request;
-        // Предполагаем, что здесь будет код для вычисления выражения
+        double result = evaluate_expression(expression);
 
         // Сохранение запроса и результата в базу данных
         Query query;
         query.expression = expression;
-        query.result = "result"; // Замените это на фактический результат
+        query.result = std::to_string(result); // Преобразуем результат в строку для сохранения в базу данных
 
         // Вставка запроса и результата в базу данных
         std::stringstream ss;

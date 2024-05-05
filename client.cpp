@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <cmath>
 #include <limits>
+#include <sstream>
 #include "parser.h"
 
 // Функция для отправки запроса на сервер и получения ответа
@@ -41,10 +42,19 @@ int main() {
         return -1;
     }
 
+    // Вводим имя пользователя
+    std::string username;
+    std::cout << "Enter your username: ";
+    std::cin >> username;
+
+    // Отправляем команду LOGIN с именем пользователя
+    send_request(client_socket, "LOGIN " + username);
+
     // Выводим сообщение о подключении к серверу
     std::cout << "Connected to server" << std::endl;
 
     std::string command;
+    std::getline(std::cin, command); // Очищаем буфер после считывания имени пользователя
     while (true) {
         std::cout << "Enter algebraic expression, 'history' to view your history, or 'exit' to quit: ";
         std::getline(std::cin, command);
@@ -55,7 +65,7 @@ int main() {
             break;
         } else if (command == "history") {
             // Отправляем запрос на получение истории
-            send_request(client_socket, "GET_HISTORY");
+            send_request(client_socket, "GET_HISTORY " + username);
         } else {
             // Вычисляем выражение
             double result = evaluate_expression(command);
@@ -67,8 +77,6 @@ int main() {
             }
         }
     }
-
-
 
     close(client_socket);
     // Выводим сообщение об отключении от сервера

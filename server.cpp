@@ -12,11 +12,12 @@
 
 // Структура для хранения запроса и ответа
 struct Query {
+    std::string username;
     std::string expression;
     std::string result;
 };
 
-// Функция обработки запроса на сервере
+// Обработка запросов на сервере
 void handle_request(int client_socket, sqlite3* db) {
     // Получаем информацию об адресе клиента
     struct sockaddr_in client_address;
@@ -31,9 +32,17 @@ void handle_request(int client_socket, sqlite3* db) {
         recv(client_socket, buffer, 1024, 0);
         std::string request(buffer);
 
-        if (request == "GET_HISTORY") {
-            // Получаем историю запросов клиента
-            std::string client_history_query = "SELECT expression, result FROM queries;";
+        // Разбираем команду пользователя и его имя
+        std::istringstream iss(request);
+        std::string command, username;
+        iss >> command >> username;
+
+        if (command == "LOGIN") {
+            // Здесь можно добавить проверку имени пользователя и пароля
+            continue; // Продолжаем цикл, ожидая новые запросы
+        } else if (command == "GET_HISTORY") {
+            // Получаем историю запросов данного пользователя
+            std::string client_history_query = "SELECT expression, result FROM queries WHERE username='" + username + "';";
             sqlite3_stmt *stmt;
             std::stringstream response;
             if (sqlite3_prepare_v2(db, client_history_query.c_str(), -1, &stmt, NULL) == SQLITE_OK) {
@@ -50,28 +59,29 @@ void handle_request(int client_socket, sqlite3* db) {
             // Отправляем историю клиенту
             std::string response_str = response.str();
             send(client_socket, response_str.c_str(), response_str.length(), 0);
-        } else if (request == "EXIT") {
-            // Если получена команда на отключение, закрываем сокет и выводим сообщение об отключении клиента
+        } else if (command == "EXIT") {
+            // Если получена команда на отключение, закрываем соединение с клиентом и завершаем обработку запросов
             close(client_socket);
             std::cout << "Client disconnected. Address: " << inet_ntoa(client_address.sin_addr) << ", Port: " << ntohs(client_address.sin_port) << std::endl;
             return;
         } else {
-            // Выполнение вычислений
-            std::string expression = request;
+            // Выполняем вычисления
+            std::string expression = command;
             double result = evaluate_expression(expression);
 
-            // Сохранение запроса и результата в базу данных
+            // Сохраняем запрос и результат в базе данных
             Query query;
+            query.username = username;
             query.expression = expression;
-            query.result = std::to_string(result); // Преобразуем результат в строку для сохранения в базу данных
+            query.result = std::to_string(result); // Преобразуем результат в строку для сохранения в базе данных
 
-            // Вставка запроса и результата в базу данных
+            // Вставляем запрос и результат в базу данных
             std::stringstream ss;
-            ss << "INSERT INTO queries (expression, result) VALUES ('" << query.expression << "', '" << query.result << "');";
+            ss << "INSERT INTO queries (username, expression, result) VALUES ('" << query.username << "', '" << query.expression << "', '" << query.result << "');";
             std::string sql = ss.str();
             sqlite3_exec(db, sql.c_str(), NULL, 0, NULL);
 
-            // Отправка результата клиенту
+            // Отправляем результат клиенту
             send(client_socket, query.result.c_str(), query.result.length(), 0);
         }
     }
@@ -118,7 +128,7 @@ int main() {
     }
 
     // Создание таблицы для хранения запросов, если её ещё нет
-    std::string create_table_query = "CREATE TABLE IF NOT EXISTS queries (id INTEGER PRIMARY KEY AUTOINCREMENT, expression TEXT, result TEXT);";
+    std::string create_table_query = "CREATE TABLE IF NOT EXISTS queries (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, expression TEXT, result TEXT);";
     sqlite3_exec(db, create_table_query.c_str(), NULL, 0, NULL);
 
     while (true) {

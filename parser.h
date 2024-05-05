@@ -88,4 +88,5 @@ double parse_factor(const std::string& expression, int& i) {
     return result;
 }
 
-#endif
+#endif //PARSER_H
+

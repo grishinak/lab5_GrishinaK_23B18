@@ -3,6 +3,7 @@
 #include <cstring>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <vector>
 #include <sstream>
@@ -17,6 +18,14 @@ struct Query {
 
 // Функция обработки запроса на сервере
 void handle_request(int client_socket, sqlite3* db) {
+    // Получаем информацию об адресе клиента
+    struct sockaddr_in client_address;
+    socklen_t client_addr_len = sizeof(client_address);
+    getpeername(client_socket, (struct sockaddr*)&client_address, &client_addr_len);
+
+    // Выводим сообщение о подключении клиента
+    std::cout << "Client connected. Address: " << inet_ntoa(client_address.sin_addr) << ", Port: " << ntohs(client_address.sin_port) << std::endl;
+
     char buffer[1024] = {0};
     recv(client_socket, buffer, 1024, 0);
     std::string request(buffer);
@@ -41,6 +50,11 @@ void handle_request(int client_socket, sqlite3* db) {
         // Отправляем историю клиенту
         std::string response_str = response.str();
         send(client_socket, response_str.c_str(), response_str.length(), 0);
+    } else if (request == "EXIT") {
+        // Если получена команда на отключение, закрываем сокет и выводим сообщение об отключении клиента
+        close(client_socket);
+        std::cout << "Client disconnected. Address: " << inet_ntoa(client_address.sin_addr) << ", Port: " << ntohs(client_address.sin_port) << std::endl;
+        return;
     } else {
         // Выполнение вычислений
         std::string expression = request;

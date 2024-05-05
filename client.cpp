@@ -8,7 +8,6 @@
 #include <limits>
 #include "parser.h"
 
-
 // Функция для отправки запроса на сервер и получения ответа
 void send_request(int client_socket, const std::string& request) {
     char buffer[1024] = {0};
@@ -16,8 +15,6 @@ void send_request(int client_socket, const std::string& request) {
     recv(client_socket, buffer, 1024, 0);
     std::cout << buffer << std::endl;
 }
-
-
 
 int main() {
     int client_socket;
@@ -44,6 +41,9 @@ int main() {
         return -1;
     }
 
+    // Выводим сообщение о подключении к серверу
+    std::cout << "Connected to server" << std::endl;
+
     std::string command;
     while (true) {
         std::cout << "Enter algebraic expression, 'history' to view your history, or 'exit' to quit: ";
@@ -68,6 +68,10 @@ int main() {
         }
     }
 
+
+
     close(client_socket);
+    // Выводим сообщение об отключении от сервера
+    std::cout << "Disconnected from server" << std::endl;
     return 0;
 }

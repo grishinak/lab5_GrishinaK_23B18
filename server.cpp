@@ -3,11 +3,11 @@
 #include <cstring>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
 #include <unistd.h>
 #include <vector>
 #include <sstream>
 #include <sqlite3.h>
+#include <arpa/inet.h>
 #include "parser.h"
 
 // Структура для хранения запроса и ответа
@@ -27,55 +27,54 @@ void handle_request(int client_socket, sqlite3* db) {
     std::cout << "Client connected. Address: " << inet_ntoa(client_address.sin_addr) << ", Port: " << ntohs(client_address.sin_port) << std::endl;
 
     char buffer[1024] = {0};
-    recv(client_socket, buffer, 1024, 0);
-    std::string request(buffer);
+    while (true) {
+        recv(client_socket, buffer, 1024, 0);
+        std::string request(buffer);
 
-    // Проверяем тип запроса
-    if (request == "GET_HISTORY") {
-        // Получаем историю запросов клиента
-        std::string client_history_query = "SELECT expression, result FROM queries;";
-        sqlite3_stmt *stmt;
-        std::stringstream response;
-        if (sqlite3_prepare_v2(db, client_history_query.c_str(), -1, &stmt, NULL) == SQLITE_OK) {
-            while (sqlite3_step(stmt) == SQLITE_ROW) {
-                const unsigned char *expression = sqlite3_column_text(stmt, 0);
-                const unsigned char *result = sqlite3_column_text(stmt, 1);
-                response << expression << ": " << result << std::endl;
+        if (request == "GET_HISTORY") {
+            // Получаем историю запросов клиента
+            std::string client_history_query = "SELECT expression, result FROM queries;";
+            sqlite3_stmt *stmt;
+            std::stringstream response;
+            if (sqlite3_prepare_v2(db, client_history_query.c_str(), -1, &stmt, NULL) == SQLITE_OK) {
+                while (sqlite3_step(stmt) == SQLITE_ROW) {
+                    const unsigned char *expression = sqlite3_column_text(stmt, 0);
+                    const unsigned char *result = sqlite3_column_text(stmt, 1);
+                    response << expression << ": " << result << std::endl;
+                }
+                sqlite3_finalize(stmt);
+            } else {
+                response << "Error retrieving history.";
             }
-            sqlite3_finalize(stmt);
+
+            // Отправляем историю клиенту
+            std::string response_str = response.str();
+            send(client_socket, response_str.c_str(), response_str.length(), 0);
+        } else if (request == "EXIT") {
+            // Если получена команда на отключение, закрываем сокет и выводим сообщение об отключении клиента
+            close(client_socket);
+            std::cout << "Client disconnected. Address: " << inet_ntoa(client_address.sin_addr) << ", Port: " << ntohs(client_address.sin_port) << std::endl;
+            return;
         } else {
-            response << "Error retrieving history.";
+            // Выполнение вычислений
+            std::string expression = request;
+            double result = evaluate_expression(expression);
+
+            // Сохранение запроса и результата в базу данных
+            Query query;
+            query.expression = expression;
+            query.result = std::to_string(result); // Преобразуем результат в строку для сохранения в базу данных
+
+            // Вставка запроса и результата в базу данных
+            std::stringstream ss;
+            ss << "INSERT INTO queries (expression, result) VALUES ('" << query.expression << "', '" << query.result << "');";
+            std::string sql = ss.str();
+            sqlite3_exec(db, sql.c_str(), NULL, 0, NULL);
+
+            // Отправка результата клиенту
+            send(client_socket, query.result.c_str(), query.result.length(), 0);
         }
-
-        // Отправляем историю клиенту
-        std::string response_str = response.str();
-        send(client_socket, response_str.c_str(), response_str.length(), 0);
-    } else if (request == "EXIT") {
-        // Если получена команда на отключение, закрываем сокет и выводим сообщение об отключении клиента
-        close(client_socket);
-        std::cout << "Client disconnected. Address: " << inet_ntoa(client_address.sin_addr) << ", Port: " << ntohs(client_address.sin_port) << std::endl;
-        return;
-    } else {
-        // Выполнение вычислений
-        std::string expression = request;
-        double result = evaluate_expression(expression);
-
-        // Сохранение запроса и результата в базу данных
-        Query query;
-        query.expression = expression;
-        query.result = std::to_string(result); // Преобразуем результат в строку для сохранения в базу данных
-
-        // Вставка запроса и результата в базу данных
-        std::stringstream ss;
-        ss << "INSERT INTO queries (expression, result) VALUES ('" << query.expression << "', '" << query.result << "');";
-        std::string sql = ss.str();
-        sqlite3_exec(db, sql.c_str(), NULL, 0, NULL);
-
-        // Отправка результата клиенту
-        send(client_socket, query.result.c_str(), query.result.length(), 0);
     }
-
-    close(client_socket);
 }
 
 int main() {

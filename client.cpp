@@ -4,8 +4,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <cmath>
-#include <limits>
 #include <sstream>
 #include "parser.h"
 
@@ -42,39 +40,33 @@ int main() {
         return -1;
     }
 
-    // Вводим имя пользователя
-    std::string username;
-    std::cout << "Enter your username: ";
-    std::cin >> username;
-
-    // Отправляем команду LOGIN с именем пользователя
-    send_request(client_socket, "LOGIN " + username);
-
-    // Выводим сообщение о подключении к серверу
-    std::cout << "Connected to server" << std::endl;
-
     std::string command;
-    std::getline(std::cin, command); // Очищаем буфер после считывания имени пользователя
+    // std::getline(std::cin, command); // Очищаем буфер после считывания имени пользователя???
     while (true) {
-        std::cout << "Enter algebraic expression, 'history' to view your history, or 'exit' to quit: ";
+        std::cout << "Enter 'register' to create a new account, 'login' to login, 'history' to view your history, or 'exit' to quit: ";
         std::getline(std::cin, command);
 
         if (command == "exit") {
             // Отправляем команду на отключение и выходим из цикла
             send_request(client_socket, "EXIT");
             break;
+        } else if (command == "register") {
+            // Регистрация нового пользователя
+            std::string username, password;
+            std::cout << "Enter username: ";
+            std::cin >> username;
+            std::cout << "Enter password: ";
+            std::cin >> password;
+            send_request(client_socket, "REGISTER " + username + " " + password);
+        } else if (command == "login") {
+            // Вход пользователя
+            // TODO
         } else if (command == "history") {
-            // Отправляем запрос на получение истории
-            send_request(client_socket, "GET_HISTORY " + username);
+            // Получение истории запросов пользователя
+            // TODO
         } else {
-            // Вычисляем выражение
-            double result = evaluate_expression(command);
-            if (!std::isnan(result)) {
-                std::cout << "Result: " << result << std::endl;
-
-                // Отправляем выражение серверу
-                send_request(client_socket, command);
-            }
+            // Обработка алгебраического выражения
+            // TODO
         }
     }
 

@@ -17,7 +17,18 @@ struct Query {
     std::string result;
 };
 
-// Обработка запросов на сервере
+// Объявление функции username_exists
+bool username_exists(sqlite3* db, const std::string& username);
+
+// Объявление функции register_user
+bool register_user(sqlite3* db, const std::string& username, const std::string& password);
+
+// Функция для отправки сообщений клиенту
+void send_response(int client_socket, const std::string& response) {
+    send(client_socket, response.c_str(), response.length(), 0);
+}
+
+// Функция для обработки запросов на сервере
 void handle_request(int client_socket, sqlite3* db) {
     // Получаем информацию об адресе клиента
     struct sockaddr_in client_address;
@@ -37,28 +48,32 @@ void handle_request(int client_socket, sqlite3* db) {
         std::string command, username;
         iss >> command >> username;
 
-        if (command == "LOGIN") {
-            // Здесь можно добавить проверку имени пользователя и пароля
-            continue; // Продолжаем цикл, ожидая новые запросы
-        } else if (command == "GET_HISTORY") {
-            // Получаем историю запросов данного пользователя
-            std::string client_history_query = "SELECT expression, result FROM queries WHERE username='" + username + "';";
-            sqlite3_stmt *stmt;
-            std::stringstream response;
-            if (sqlite3_prepare_v2(db, client_history_query.c_str(), -1, &stmt, NULL) == SQLITE_OK) {
-                while (sqlite3_step(stmt) == SQLITE_ROW) {
-                    const unsigned char *expression = sqlite3_column_text(stmt, 0);
-                    const unsigned char *result = sqlite3_column_text(stmt, 1);
-                    response << expression << ": " << result << std::endl;
-                }
-                sqlite3_finalize(stmt);
-            } else {
-                response << "Error retrieving history.";
-            }
+        if (command == "REGISTER") {
+            // Регистрация нового пользователя
+            std::string password;
+            iss >> password;
 
-            // Отправляем историю клиенту
-            std::string response_str = response.str();
-            send(client_socket, response_str.c_str(), response_str.length(), 0);
+            if (username.empty() || password.empty()) {
+                send_response(client_socket, "Error: Username or password cannot be empty.");
+            } else {
+                // Проверяем, не занято ли имя пользователя
+                if (username_exists(db, username)) {
+                    send_response(client_socket, "Error: Username already exists.");
+                } else {
+                    // Регистрируем нового пользователя
+                    if (register_user(db, username, password)) {
+                        send_response(client_socket, "Registration successful. You can now login.");
+                    } else {
+                        send_response(client_socket, "Error: Registration failed.");
+                    }
+                }
+            }
+        } else if (command == "LOGIN") {
+            // Обработка входа пользователя
+            // Реализуйте эту часть в соответствии с вашими требованиями для аутентификации
+        } else if (command == "GET_HISTORY") {
+            // Получение истории запросов данного пользователя
+            // Реализуйте эту часть в соответствии с вашими требованиями
         } else if (command == "EXIT") {
             // Если получена команда на отключение, закрываем соединение с клиентом и завершаем обработку запросов
             close(client_socket);
@@ -82,9 +97,33 @@ void handle_request(int client_socket, sqlite3* db) {
             sqlite3_exec(db, sql.c_str(), NULL, 0, NULL);
 
             // Отправляем результат клиенту
-            send(client_socket, query.result.c_str(), query.result.length(), 0);
+            send_response(client_socket, query.result);
         }
     }
+}
+
+// Функция для регистрации нового пользователя
+bool register_user(sqlite3* db, const std::string& username, const std::string& password) {
+    std::stringstream ss;
+    ss << "INSERT INTO users (username, password) VALUES ('" << username << "', '" << password << "');";
+    std::string sql = ss.str();
+    int result = sqlite3_exec(db, sql.c_str(), NULL, 0, NULL);
+    return result == SQLITE_OK;
+}
+
+// Функция для проверки существования имени пользователя
+bool username_exists(sqlite3* db, const std::string& username) {
+    std::string query = "SELECT COUNT(*) FROM users WHERE username='" + username + "';";
+    sqlite3_stmt *stmt;
+    if (sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL) == SQLITE_OK) {
+        if (sqlite3_step(stmt) == SQLITE_ROW) {
+            int count = sqlite3_column_int(stmt, 0);
+            sqlite3_finalize(stmt);
+            return count > 0;
+        }
+        sqlite3_finalize(stmt);
+    }
+    return false;
 }
 
 int main() {
@@ -128,7 +167,7 @@ int main() {
     }
 
     // Создание таблицы для хранения запросов, если её ещё нет
-    std::string create_table_query = "CREATE TABLE IF NOT EXISTS queries (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, expression TEXT, result TEXT);";
+    std::string create_table_query = "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT);";
     sqlite3_exec(db, create_table_query.c_str(), NULL, 0, NULL);
 
     while (true) {

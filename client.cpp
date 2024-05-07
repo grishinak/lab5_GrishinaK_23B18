@@ -1,3 +1,4 @@
+// client.cpp
 #include <iostream>
 #include <cstring>
 #include <sys/socket.h>
@@ -12,7 +13,12 @@ void send_request(int client_socket, const std::string& request) {
     char buffer[1024] = {0};
     send(client_socket, request.c_str(), request.length(), 0);
     recv(client_socket, buffer, 1024, 0);
-    std::cout << buffer << std::endl;
+    std::string response(buffer);
+    if (!response.empty() && response != "nan") {
+        std::cout << "Result: " << response << std::endl;
+    } else if (response == "nan") {
+        std::cout << "Error: Invalid expression" << std::endl;
+    }
 }
 
 int main() {
@@ -40,38 +46,18 @@ int main() {
         return -1;
     }
 
-    std::string command;
+    std::string expression;
     while (true) {
-        std::cout << "Enter 'register' to create a new account, 'login' to login, 'history' to view your history, or 'exit' to quit: ";
-        std::getline(std::cin, command);
+        std::cout << "Enter an expression to evaluate (e.g., '2+2', '3*4', etc.), or 'exit' to quit: ";
+        std::getline(std::cin, expression);
 
-        if (command == "exit") {
+        if (expression == "exit") {
             // Отправляем команду на отключение и выходим из цикла
             send_request(client_socket, "EXIT");
             break;
-        } else if (command == "register") {
-            // Регистрация нового пользователя
-            std::string username, password;
-            std::cout << "Enter username: ";
-            std::cin >> username;
-            std::cout << "Enter password: ";
-            std::cin >> password;
-            send_request(client_socket, "REGISTER " + username + " " + password);
-        } else if (command == "login") {
-            // Вход пользователя
-            std::string username, password;
-            std::cout << "Enter username: ";
-            std::cin >> username;
-            std::cout << "Enter password: ";
-            std::cin >> password;
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // очищаем буфер ввода
-            send_request(client_socket, "LOGIN " + username + " " + password);
-        } else if (command == "history") {
-            // Получение истории запросов пользователя
-            // TODO
         } else {
-            // Обработка алгебраического выражения
-            // TODO
+            // Отправляем выражение на сервер для вычисления
+            send_request(client_socket, expression);
         }
     }
 

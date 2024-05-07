@@ -1,3 +1,4 @@
+// server.cpp
 #include <iostream>
 #include <thread>
 #include <cstring>
@@ -45,73 +46,19 @@ void handle_request(int client_socket, sqlite3* db) {
 
         // Разбираем команду пользователя и его имя
         std::istringstream iss(request);
-        std::string command, username;
-        iss >> command >> username;
+        std::string expression;
+        iss >> expression;
 
-        if (command == "REGISTER") {
-            // Регистрация нового пользователя
-            std::string password;
-            iss >> password;
-
-            if (username.empty() || password.empty()) {
-                send_response(client_socket, "Error: Username or password cannot be empty.");
-            } else {
-                // Проверяем, не занято ли имя пользователя
-                if (username_exists(db, username)) {
-                    send_response(client_socket, "Error: Username already exists.");
-                } else {
-                    // Регистрируем нового пользователя
-                    if (register_user(db, username, password)) {
-                        send_response(client_socket, "Registration successful. You can now login.");
-                    } else {
-                        send_response(client_socket, "Error: Registration failed.");
-                    }
-                }
-            }
-        } else if (command == "LOGIN") {
-            // Обработка входа пользователя
-            std::string password;
-            iss >> password;
-
-            if (username.empty() || password.empty()) {
-                send_response(client_socket, "Error: Username or password cannot be empty.");
-            } else {
-                // Проверяем существование пользователя и соответствие пароля
-                if (username_exists(db, username)) {
-                    // Здесь вам нужно реализовать проверку пароля
-                    send_response(client_socket, "Login successful.");
-                } else {
-                    send_response(client_socket, "Error: Invalid username or password.");
-                }
-            }
-        } else if (command == "GET_HISTORY") {
-            // Получение истории запросов данного пользователя
-            // Реализуйте эту часть в соответствии с вашими требованиями
-        } else if (command == "EXIT") {
+        if (expression == "EXIT") {
             // Если получена команда на отключение, закрываем соединение с клиентом и завершаем обработку запросов
             close(client_socket);
             std::cout << "Client disconnected. Address: " << inet_ntoa(client_address.sin_addr) << ", Port: " << ntohs(client_address.sin_port) << std::endl;
             return;
-        } else {
-            // Выполняем вычисления
-            std::string expression = command;
-            double result = evaluate_expression(expression);
-
-            // Сохраняем запрос и результат в базе данных
-            Query query;
-            query.username = username;
-            query.expression = expression;
-            query.result = std::to_string(result); // Преобразуем результат в строку для сохранения в базе данных
-
-            // Вставляем запрос и результат в базу данных
-            std::stringstream ss;
-            ss << "INSERT INTO queries (username, expression, result) VALUES ('" << query.username << "', '" << query.expression << "', '" << query.result << "');";
-            std::string sql = ss.str();
-            sqlite3_exec(db, sql.c_str(), NULL, 0, NULL);
-
-            // Отправляем результат клиенту
-            send_response(client_socket, query.result);
         }
+
+        // Вычисляем выражение и отправляем результат клиенту
+        double result = evaluate_expression(expression);
+        send_response(client_socket, std::to_string(result));
     }
 }
 

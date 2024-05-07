@@ -41,7 +41,6 @@ int main() {
     }
 
     std::string command;
-    // std::getline(std::cin, command); // Очищаем буфер после считывания имени пользователя???
     while (true) {
         std::cout << "Enter 'register' to create a new account, 'login' to login, 'history' to view your history, or 'exit' to quit: ";
         std::getline(std::cin, command);
@@ -65,6 +64,7 @@ int main() {
             std::cin >> username;
             std::cout << "Enter password: ";
             std::cin >> password;
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n'); // очищаем буфер ввода
             send_request(client_socket, "LOGIN " + username + " " + password);
         } else if (command == "history") {
             // Получение истории запросов пользователя

@@ -70,7 +70,20 @@ void handle_request(int client_socket, sqlite3* db) {
             }
         } else if (command == "LOGIN") {
             // Обработка входа пользователя
-            // Реализуйте эту часть в соответствии с вашими требованиями для аутентификации
+            std::string password;
+            iss >> password;
+
+            if (username.empty() || password.empty()) {
+                send_response(client_socket, "Error: Username or password cannot be empty.");
+            } else {
+                // Проверяем существование пользователя и соответствие пароля
+                if (username_exists(db, username)) {
+                    // Здесь вам нужно реализовать проверку пароля
+                    send_response(client_socket, "Login successful.");
+                } else {
+                    send_response(client_socket, "Error: Invalid username or password.");
+                }
+            }
         } else if (command == "GET_HISTORY") {
             // Получение истории запросов данного пользователя
             // Реализуйте эту часть в соответствии с вашими требованиями

@@ -60,7 +60,12 @@ int main() {
             send_request(client_socket, "REGISTER " + username + " " + password);
         } else if (command == "login") {
             // Вход пользователя
-            // TODO
+            std::string username, password;
+            std::cout << "Enter username: ";
+            std::cin >> username;
+            std::cout << "Enter password: ";
+            std::cin >> password;
+            send_request(client_socket, "LOGIN " + username + " " + password);
         } else if (command == "history") {
             // Получение истории запросов пользователя
             // TODO

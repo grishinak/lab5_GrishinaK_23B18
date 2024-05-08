@@ -1,4 +1,3 @@
-// client.cpp
 #include <iostream>
 #include <cstring>
 #include <sys/socket.h>
@@ -13,12 +12,27 @@ void send_request(int client_socket, const std::string& request) {
     char buffer[1024] = {0};
     send(client_socket, request.c_str(), request.length(), 0);
     recv(client_socket, buffer, 1024, 0);
-    std::string response(buffer);
-    if (!response.empty() && response != "nan") {
-        std::cout << "Result: " << response << std::endl;
-    } else if (response == "nan") {
-        std::cout << "Error: Invalid expression" << std::endl;
+    if (request != "EXIT") {
+        std::cout << "Result: " << buffer << std::endl;
     }
+}
+
+// Функция для регистрации нового пользователя
+void register_user(int client_socket, const std::string& username, const std::string& password) {
+    std::string request = "REGISTER " + username + " " + password;
+    send_request(client_socket, request);
+}
+
+// Функция для входа пользователя
+void login_user(int client_socket, const std::string& username, const std::string& password) {
+    std::string request = "LOGIN " + username + " " + password;
+    send_request(client_socket, request);
+}
+
+// Функция для получения истории запросов пользователя
+void get_history(int client_socket, const std::string& username) {
+    std::string request = "GET_HISTORY " + username;
+    send_request(client_socket, request);
 }
 
 int main() {
@@ -46,17 +60,40 @@ int main() {
         return -1;
     }
 
-    std::string expression;
-    while (true) {
-        std::cout << "Enter an expression to evaluate (e.g., '2+2', '3*4', etc.), or 'exit' to quit: ";
-        std::getline(std::cin, expression);
+    std::string command;
+    std::string username, password;
 
-        if (expression == "exit") {
+    while (true) {
+        std::cout << "Enter an algebraic expression to calculate or 'register' to create a new account, 'login' to login, 'history' to view your history, or 'exit' to quit: ";
+        std::cin >> command;
+
+        if (command == "exit") {
             // Отправляем команду на отключение и выходим из цикла
             send_request(client_socket, "EXIT");
             break;
+        } else if (command == "register") {
+            // Регистрация нового пользователя
+            std::cout << "Enter username: ";
+            std::cin >> username;
+            std::cout << "Enter password: ";
+            std::cin >> password;
+            register_user(client_socket, username, password);
+        } else if (command == "login") {
+            // Вход пользователя
+            std::cout << "Enter username: ";
+            std::cin >> username;
+            std::cout << "Enter password: ";
+            std::cin >> password;
+            login_user(client_socket, username, password);
+        } else if (command == "history") {
+            // Получение истории запросов пользователя
+            get_history(client_socket, username);
         } else {
-            // Отправляем выражение на сервер для вычисления
+            // Обработка алгебраического выражения
+            std::string expression;
+            std::cin.ignore(); // Очищаем буфер ввода
+            std::cout << "Enter an expression to evaluate (e.g., '2+2', '3*4', etc.), or 'exit' to quit: ";
+            std::getline(std::cin, expression);
             send_request(client_socket, expression);
         }
     }

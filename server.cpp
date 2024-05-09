@@ -23,6 +23,7 @@ bool login_user(sqlite3* db, const std::string& username, const std::string& pas
 bool username_exists(sqlite3* db, const std::string& username);
 void save_query(sqlite3* db, const std::string& username, const std::string& expression, const std::string& result);
 void send_response(int client_socket, const std::string& response);
+std::string get_user_history(sqlite3* db, const std::string& username); // Добавленная функция
 
 // Функция для обработки запросов на сервере
 void handle_request(int client_socket, sqlite3* db) {
@@ -80,7 +81,8 @@ void handle_request(int client_socket, sqlite3* db) {
             }
         } else if (command == "GET_HISTORY") {
             // Получение истории запросов данного пользователя
-            // TODO
+            std::string history = get_user_history(db, username);
+            send_response(client_socket, history);
         } else if (command == "EXIT") {
             // Если получена команда на отключение, закрываем соединение с клиентом и завершаем обработку запросов
             close(client_socket);
@@ -102,6 +104,24 @@ void handle_request(int client_socket, sqlite3* db) {
             send_response(client_socket, query.result);
         }
     }
+}
+
+// Функция для получения истории запросов пользователя
+std::string get_user_history(sqlite3* db, const std::string& username) {
+    std::string history;
+    std::stringstream ss;
+    ss << "SELECT expression, result FROM history WHERE username='" << username << "';";
+    std::string query = ss.str();
+    sqlite3_stmt *stmt;
+    if (sqlite3_prepare_v2(db, query.c_str(), -1, &stmt, NULL) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            std::string expression = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
+            std::string result = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
+            history += "Expression: " + expression + ", Result: " + result + "\n";
+        }
+        sqlite3_finalize(stmt);
+    }
+    return history;
 }
 
 // Функция для регистрации нового пользователя

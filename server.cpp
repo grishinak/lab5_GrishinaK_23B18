@@ -229,7 +229,7 @@ int main() {
         // Принятие нового подключения
         if ((client_socket = accept(server_socket, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
             perror("accept");
-            exit(EXIT_FAILURE);
+            continue; // Продолжаем слушать новые подключения при ошибке
         }
 
         // Создание нового потока для обработки запроса

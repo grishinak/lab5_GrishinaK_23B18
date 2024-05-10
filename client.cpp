@@ -64,7 +64,9 @@ int main() {
     std::string username, password;
 
     while (true) {
-        std::cout << "Enter an algebraic expression to calculate or 'register' to create a new account, 'login' to login, 'history' to view your history, or 'exit' to quit: ";
+        std::cout << "Enter 'register' to create a new account, 
+        'login' to login, 'history' to view your history, 
+        something else to be able to calculate an algebraic expression or 'exit' to quit: ";
         std::cin >> command;
 
         if (command == "exit") {

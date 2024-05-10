@@ -25,6 +25,76 @@ void save_query(sqlite3* db, const std::string& username, const std::string& exp
 void send_response(int client_socket, const std::string& response);
 std::string get_user_history(sqlite3* db, const std::string& username); // Добавленная функция
 
+// Объявление функций для работы сервера
+void handle_request(int client_socket, sqlite3* db);
+std::string get_user_history(sqlite3* db, const std::string& username);
+
+
+int main() {
+    int server_socket;
+    struct sockaddr_in address;
+    int opt = 1;
+    int addrlen = sizeof(address);
+
+    // Создание сокета сервера
+    if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+        perror("socket failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Настройка параметров сокета
+    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
+    }
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(8080);
+
+    // Привязка сокета к адресу и порту
+    if (bind(server_socket, (struct sockaddr *)&address, sizeof(address)) < 0) {
+        perror("bind failed");
+        exit(EXIT_FAILURE);
+    }
+
+    // Прослушивание сокета
+    if (listen(server_socket, 3) < 0) {
+        perror("listen");
+        exit(EXIT_FAILURE);
+    }
+
+    // Подключение к базе данных SQLite
+    sqlite3* db;
+    if (sqlite3_open("queries.db", &db)) {
+        std::cerr << "Can't open database: " << sqlite3_errmsg(db) << std::endl;
+        return 0;
+    }
+
+    // Создание таблицы для хранения пользователей, если её ещё нет
+    std::string create_users_table_query = "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT);";
+    sqlite3_exec(db, create_users_table_query.c_str(), NULL, 0, NULL);
+
+    // Создание таблицы для хранения истории запросов, если её ещё нет
+    std::string create_history_table_query = "CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, expression TEXT, result TEXT);";
+    sqlite3_exec(db, create_history_table_query.c_str(), NULL, 0, NULL);
+
+    while (true) {
+        int client_socket;
+        // Принятие нового подключения
+        if ((client_socket = accept(server_socket, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
+            perror("accept");
+            exit(EXIT_FAILURE);
+        }
+
+        // Создание нового потока для обработки запроса
+        std::thread(handle_request, client_socket, db).detach();
+    }
+
+    sqlite3_close(db);
+    return 0;
+}
+
+
 // Функция для обработки запросов на сервере
 void handle_request(int client_socket, sqlite3* db) {
     // Получаем информацию об адресе клиента
@@ -106,6 +176,8 @@ void handle_request(int client_socket, sqlite3* db) {
     }
 }
 
+
+
 // Функция для получения истории запросов пользователя
 std::string get_user_history(sqlite3* db, const std::string& username) {
     std::string history;
@@ -124,6 +196,7 @@ std::string get_user_history(sqlite3* db, const std::string& username) {
     return history;
 }
 
+
 // Функция для регистрации нового пользователя
 bool register_user(sqlite3* db, const std::string& username, const std::string& password) {
     std::stringstream ss;
@@ -132,8 +205,7 @@ bool register_user(sqlite3* db, const std::string& username, const std::string& 
     int result = sqlite3_exec(db, sql.c_str(), NULL, 0, NULL);
     return result == SQLITE_OK;
 }
-
-// Функция для входа пользователя
+// Функция для входа нового пользователя
 bool login_user(sqlite3* db, const std::string& username, const std::string& password) {
     std::string query = "SELECT COUNT(*) FROM users WHERE username='" + username + "' AND password='" + password + "';";
     sqlite3_stmt *stmt;
@@ -174,68 +246,4 @@ void save_query(sqlite3* db, const std::string& username, const std::string& exp
 // Функция для отправки сообщений клиенту
 void send_response(int client_socket, const std::string& response) {
     send(client_socket, response.c_str(), response.length(), 0);
-}
-
-int main() {
-    int server_socket;
-    struct sockaddr_in address;
-    int opt = 1;
-    int addrlen = sizeof(address);
-
-    // Создание сокета сервера
-    if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("socket failed");
-        exit(EXIT_FAILURE);
-    }
-
-    // Настройка параметров сокета
-    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
-        perror("setsockopt");
-        exit(EXIT_FAILURE);
-    }
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(8080);
-
-    // Привязка сокета к адресу и порту
-    if (bind(server_socket, (struct sockaddr *)&address, sizeof(address)) < 0) {
-        perror("bind failed");
-        exit(EXIT_FAILURE);
-    }
-
-    // Прослушивание сокета
-    if (listen(server_socket, 3) < 0) {
-        perror("listen");
-        exit(EXIT_FAILURE);
-    }
-
-    // Подключение к базе данных SQLite
-    sqlite3* db;
-    if (sqlite3_open("queries.db", &db)) {
-        std::cerr << "Can't open database: " << sqlite3_errmsg(db) << std::endl;
-        return 0;
-    }
-
-    // Создание таблицы для хранения пользователей, если её ещё нет
-    std::string create_users_table_query = "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE, password TEXT);";
-    sqlite3_exec(db, create_users_table_query.c_str(), NULL, 0, NULL);
-
-    // Создание таблицы для хранения истории запросов, если её ещё нет
-    std::string create_history_table_query = "CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, expression TEXT, result TEXT);";
-    sqlite3_exec(db, create_history_table_query.c_str(), NULL, 0, NULL);
-
-    while (true) {
-        int client_socket;
-        // Принятие нового подключения
-        if ((client_socket = accept(server_socket, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
-            perror("accept");
-            exit(EXIT_FAILURE);
-        }
-
-        // Создание нового потока для обработки запроса
-        std::thread(handle_request, client_socket, db).detach();
-    }
-
-    sqlite3_close(db);
-    return 0;
 }

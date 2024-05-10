@@ -23,7 +23,6 @@ bool login_user(sqlite3* db, const std::string& username, const std::string& pas
 bool username_exists(sqlite3* db, const std::string& username);
 void save_query(sqlite3* db, const std::string& username, const std::string& expression, const std::string& result);
 void send_response(int client_socket, const std::string& response);
-std::string get_user_history(sqlite3* db, const std::string& username); // Добавленная функция
 
 // Объявление функций для работы сервера
 void handle_request(int client_socket, sqlite3* db);

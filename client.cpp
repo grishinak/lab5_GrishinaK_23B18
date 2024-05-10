@@ -7,33 +7,12 @@
 #include <sstream>
 #include "parser.h"
 
-// Функция для отправки запроса на сервер и получения ответа
-void send_request(int client_socket, const std::string& request) {
-    char buffer[1024] = {0};
-    send(client_socket, request.c_str(), request.length(), 0);
-    recv(client_socket, buffer, 1024, 0);
-    if (request != "EXIT") {
-        std::cout << "Result: " << buffer << std::endl;
-    }
-}
+// Объявление функций для работы клиента
+void send_request(int client_socket, const std::string& request);
+void register_user(int client_socket, const std::string& username, const std::string& password);
+void login_user(int client_socket, const std::string& username, const std::string& password);
+void get_history(int client_socket, const std::string& username);
 
-// Функция для регистрации нового пользователя
-void register_user(int client_socket, const std::string& username, const std::string& password) {
-    std::string request = "REGISTER " + username + " " + password;
-    send_request(client_socket, request);
-}
-
-// Функция для входа пользователя
-void login_user(int client_socket, const std::string& username, const std::string& password) {
-    std::string request = "LOGIN " + username + " " + password;
-    send_request(client_socket, request);
-}
-
-// Функция для получения истории запросов пользователя
-void get_history(int client_socket, const std::string& username) {
-    std::string request = "GET_HISTORY " + username;
-    send_request(client_socket, request);
-}
 
 int main() {
     int client_socket;
@@ -102,4 +81,34 @@ int main() {
     // Выводим сообщение об отключении от сервера
     std::cout << "Disconnected from server" << std::endl;
     return 0;
+}
+
+
+
+// Функция для отправки запроса на сервер и получения ответа
+void send_request(int client_socket, const std::string& request) {
+    char buffer[1024] = {0};
+    send(client_socket, request.c_str(), request.length(), 0);
+    recv(client_socket, buffer, 1024, 0);
+    if (request != "EXIT") {
+        std::cout << "Result: " << buffer << std::endl;
+    }
+}
+
+// Функция для регистрации нового пользователя
+void register_user(int client_socket, const std::string& username, const std::string& password) {
+    std::string request = "REGISTER " + username + " " + password;
+    send_request(client_socket, request);
+}
+
+// Функция для входа пользователя
+void login_user(int client_socket, const std::string& username, const std::string& password) {
+    std::string request = "LOGIN " + username + " " + password;
+    send_request(client_socket, request);
+}
+
+// Функция для получения истории запросов пользователя
+void get_history(int client_socket, const std::string& username) {
+    std::string request = "GET_HISTORY " + username;
+    send_request(client_socket, request);
 }

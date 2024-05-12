@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <iostream>
+#include <mutex>
 #include <sstream>
 #include <thread>
 #include <vector>
@@ -30,6 +31,9 @@ void send_response(int client_socket, const std::string& response);
 // Объявление функций для работы сервера
 void handle_request(int client_socket, sqlite3* db);
 std::string get_user_history(sqlite3* db, const std::string& username);
+
+// Глобальный мьютекс для синхронизации доступа к базе данных
+std::mutex db_mutex;
 
 int main() {
   int server_socket;
@@ -60,7 +64,7 @@ int main() {
   }
 
   // Прослушивание сокета
-  if (listen(server_socket, 3) < 0) {
+  if (listen(server_socket, 10) < 0) {
     perror("listen");
     exit(EXIT_FAILURE);
   }
@@ -76,13 +80,21 @@ int main() {
   std::string create_users_table_query =
       "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, "
       "username TEXT UNIQUE, password TEXT);";
-  sqlite3_exec(db, create_users_table_query.c_str(), NULL, 0, NULL);
+  {
+    std::lock_guard<std::mutex> lock(
+        db_mutex);  // Захватываем мьютекс перед выполнением запроса
+    sqlite3_exec(db, create_users_table_query.c_str(), NULL, 0, NULL);
+  }
 
   // Создание таблицы для хранения истории запросов, если её ещё нет
   std::string create_history_table_query =
       "CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY "
       "AUTOINCREMENT, username TEXT, expression TEXT, result TEXT);";
-  sqlite3_exec(db, create_history_table_query.c_str(), NULL, 0, NULL);
+  {
+    std::lock_guard<std::mutex> lock(
+        db_mutex);  // Захватываем мьютекс перед выполнением запроса
+    sqlite3_exec(db, create_history_table_query.c_str(), NULL, 0, NULL);
+  }
 
   while (true) {
     int client_socket;
@@ -134,16 +146,28 @@ void handle_request(int client_socket, sqlite3* db) {
                       "Error: Username or password cannot be empty.");
       } else {
         // Проверяем, не занято ли имя пользователя
-        if (username_exists(db, username)) {
-          send_response(client_socket, "Error: Username already exists.");
-        } else {
-          // Регистрируем нового пользователя
-          if (register_user(db, username, password)) {
-            send_response(client_socket,
-                          "Registration successful. You can now login.");
-          } else {
-            send_response(client_socket, "Error: Registration failed.");
+        {
+          std::lock_guard<std::mutex> lock(
+              db_mutex);  // Захватываем мьютекс перед выполнением запроса
+          if (username_exists(db, username)) {
+            send_response(client_socket, "Error: Username already exists.");
+            continue;  // Пропускаем оставшуюся часть обработки запроса
           }
+        }
+
+        // Регистрируем нового пользователя
+        bool registration_successful = false;
+        {
+          std::lock_guard<std::mutex> lock(
+              db_mutex);  // Захватываем мьютекс перед выполнением запроса
+          registration_successful = register_user(db, username, password);
+        }
+
+        if (registration_successful) {
+          send_response(client_socket,
+                        "Registration successful. You can now login.");
+        } else {
+          send_response(client_socket, "Error: Registration failed.");
         }
       }
     } else if (command == "LOGIN") {
@@ -155,7 +179,14 @@ void handle_request(int client_socket, sqlite3* db) {
         send_response(client_socket,
                       "Error: Username or password cannot be empty.");
       } else {
-        if (login_user(db, username, password)) {
+        bool login_successful = false;
+        {
+          std::lock_guard<std::mutex> lock(
+              db_mutex);  // Захватываем мьютекс перед выполнением запроса
+          login_successful = login_user(db, username, password);
+        }
+
+        if (login_successful) {
           send_response(client_socket, "Login successful.");
         } else {
           send_response(client_socket, "Error: Invalid username or password.");
@@ -163,7 +194,12 @@ void handle_request(int client_socket, sqlite3* db) {
       }
     } else if (command == "GET_HISTORY") {
       // Получение истории запросов данного пользователя
-      std::string history = get_user_history(db, username);
+      std::string history;
+      {
+        std::lock_guard<std::mutex> lock(
+            db_mutex);  // Захватываем мьютекс перед выполнением запроса
+        history = get_user_history(db, username);
+      }
       send_response(client_socket, history);
     } else if (command == "EXIT") {
       // Если получена команда на отключение, закрываем соединение с клиентом и завершаем обработку запросов
@@ -183,7 +219,11 @@ void handle_request(int client_socket, sqlite3* db) {
       query.expression = expression;
       query.result = std::to_string(
           result);  // Преобразуем результат в строку для сохранения в базе данных
-      save_query(db, query.username, query.expression, query.result);
+      {
+        std::lock_guard<std::mutex> lock(
+            db_mutex);  // Захватываем мьютекс перед выполнением запроса
+        save_query(db, query.username, query.expression, query.result);
+      }
 
       // Отправляем результат клиенту
       send_response(client_socket, query.result);

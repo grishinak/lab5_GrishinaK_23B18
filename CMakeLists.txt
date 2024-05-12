@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 find_package(SQLite3 REQUIRED)
 
-add_executable(server server.cpp)
+add_executable(server src/server.cpp)
 target_link_libraries(server SQLite::SQLite3)
 
-add_executable(client client.cpp)
+add_executable(client src/client.cpp)

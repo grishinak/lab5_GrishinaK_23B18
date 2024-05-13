@@ -46,9 +46,9 @@ int main() {
 
   while (true) {
     std::cout << "Enter 'register' to create a new account, 'login' to login, "
-                 "'history' to view your history, something else to be able to "
+                 "'history' to view your history, 'calculate' to be able to "
                  "calculate an algebraic expression or 'exit' to quit: ";
-    std::cin >> command;
+    std::cin >> command; //На самом деле нет команды calculate, просто что-либо отличное от перечисленных 
 
     if (command == "exit") {
       // Отправляем команду на отключение и выходим из цикла

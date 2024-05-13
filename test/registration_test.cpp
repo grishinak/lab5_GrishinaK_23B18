@@ -7,20 +7,25 @@
 #include <random>
 #include <thread>
 #include <vector>
+#include <chrono>
 
-// Функция для отправки запроса на сервер и получения ответа
+// Функция для отправки запроса на сервер и получения ответа с измерением времени выполнения
 void send_request(int client_socket, const std::string& request) {
   char buffer[1024] = {0};
+  auto start_time = std::chrono::high_resolution_clock::now(); // Записываем время начала отправки запроса
   send(client_socket, request.c_str(), request.length(), 0);
   recv(client_socket, buffer, 1024, 0);
+  auto end_time = std::chrono::high_resolution_clock::now(); // Записываем время получения ответа
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
   if (request != "EXIT") {
-    std::cout << "Result: " << buffer << std::endl;
+    std::cout << "Result: " << buffer << ", Execution Time: " << duration.count() << " milliseconds" << std::endl;
   }
 }
 
-// Функция для регистрации нового пользователя
-void register_user(int client_socket, const std::string& username,
-                   const std::string& password) {
+// Функция для регистрации нового пользователя с задержкой и измерением времени выполнения
+void register_user_with_delay(int client_socket, const std::string& username,
+                   const std::string& password, int delay_ms) {
+  std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms)); // Задержка
   std::string request = "REGISTER " + username + " " + password;
   send_request(client_socket, request);
 }
@@ -66,9 +71,13 @@ int main() {
     std::string username = usernames[index];
     std::string password = passwords[index];
 
-    // Создаем новый поток для каждой регистрации пользователя
+    // Создаем новый поток для каждой регистрации пользователя с задержкой и измерением времени выполнения
     threads.emplace_back(
-        std::thread(register_user, client_socket, username, password));
+        [client_socket, username, password, i]() {
+            int delay_ms = i * 500; // Задержка увеличивается для каждого нового пользователя
+            register_user_with_delay(client_socket, username, password, delay_ms);
+        }
+    );
   }
 
   // Ждем завершения всех операций

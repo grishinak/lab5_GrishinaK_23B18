@@ -23,6 +23,7 @@ Result: Error: Username already exists., Execution Time: 0 milliseconds
 Result: Error: Username already exists., Execution Time: 0 milliseconds
 
 - database:
+
 users:
 
 |    | id  | username |  password   |
@@ -47,7 +48,8 @@ Expression: log(100), Result: 4.605170, Execution Time: 3 milliseconds
 
 Expression: sin(0.5), Result: 0.479426, Execution Time: 6 milliseconds
 
-- database
+- database:
+
 history:
 
 |    |  id | username  | expression |  result   |
@@ -60,3 +62,29 @@ history:
 | 6  |  6  |           |   sin(0.5) | 0.479426  |
 | 7  |  7  |           |   sin(0.5) | 0.479426  |
 | 8  |  8  |           |   sin(0.5) | 0.479426  |
+
+## simulation_test
+
+- terminal
+
+Expression: REGISTER test_user test_password, Result: Registration successful. You can now login., Execution Time: 6 milliseconds
+
+Expression: LOGIN test_user test_password, Result: Error: Invalid username or password., Execution Time: 0 milliseconds
+
+Expression: 2+2*2-2, Result: 4.000000, Execution Time: 2 milliseconds
+
+- database: 
+
+users:
+
+|    | id  | username     |  password       |
+|----|-----|--------------|-----------------|
+| 1  |  1  |   test_user  |  test_password  |
+
+history:
+
+|    |  id | username                  | expression             |  result   |
+|----|-----|---------------------------|------------------------|-----------|
+| 1  |  1  |     test_passwordord      |   2+2*2-2est_user      | 4.000000  |
+| 2  |  2  |     test_passwordord      |   2+2*2-2est_user      | 4.000000  |
+| 3  |  3  |     test_passwordord      |   2+2*2-2est_user      | 4.000000  |

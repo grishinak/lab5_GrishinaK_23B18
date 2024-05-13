@@ -15,3 +15,4 @@ add_executable(client src/client.cpp)
 #Тесты
 add_executable(registration_test test/registration_test.cpp)
 add_executable(calculation_test test/calculation_test.cpp)
+add_executable(simulation_test test/simulation_test.cpp)

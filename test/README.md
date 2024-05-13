@@ -2,35 +2,25 @@
 
 ### terminal:
 
-- **Result:** Registration successful. You can now login.
-  - **Execution Time:** 5 milliseconds
+- **Result:** Registration successful. You can now login. **Execution Time:** 5 milliseconds
 
-- **Result:** Error: Username already exists.
-  - **Execution Time:** 0 milliseconds
+- **Result:** Error: Username already exists. **Execution Time:** 0 milliseconds
 
-- **Result:** Error: Username already exists.
-  - **Execution Time:** 0 milliseconds
+- **Result:** Error: Username already exists. **Execution Time:** 0 milliseconds
 
-- **Result:** Registration successful. You can now login.
-  - **Execution Time:** 4 milliseconds
+- **Result:** Registration successful. You can now login. **Execution Time:** 4 milliseconds
 
-- **Result:** Registration successful. You can now login.
-  - **Execution Time:** 3 milliseconds
+- **Result:** Registration successful. You can now login. **Execution Time:** 3 milliseconds
 
-- **Result:** Error: Username already exists.
-  - **Execution Time:** 0 milliseconds
+- **Result:** Error: Username already exists. **Execution Time:** 0 milliseconds
 
-- **Result:** Error: Username already exists.
-  - **Execution Time:** 0 milliseconds
+- **Result:** Error: Username already exists. **Execution Time:** 0 milliseconds
 
-- **Result:** Error: Username already exists.
-  - **Execution Time:** 0 milliseconds
+- **Result:** Error: Username already exists. **Execution Time:** 0 milliseconds
 
-- **Result:** Error: Username already exists.
-  - **Execution Time:** 0 milliseconds
+- **Result:** Error: Username already exists. **Execution Time:** 0 milliseconds
 
-- **Result:** Error: Username already exists.
-  - **Execution Time:** 0 milliseconds
+- **Result:** Error: Username already exists. **Execution Time:** 0 milliseconds
 
 ### database:
 

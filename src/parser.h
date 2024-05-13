@@ -80,6 +80,68 @@ double parse_factor(const std::string& expression, int& i) {
       size_t j;
       result = std::stod(expression.substr(i), &j);
       i += j;
+    } else if (std::isalpha(expression[i])) {
+      size_t func_end = expression.find_first_of("()", i);
+      std::string func_name = expression.substr(i, func_end - i);
+      i = func_end;
+      
+      if (func_name == "sin") {
+        // Обработка функции синуса
+        if (expression[i] != '(') {
+          std::cerr << "Error: Expected '(' after 'sin'" << std::endl;
+          return std::numeric_limits<double>::quiet_NaN();
+        }
+        i++;
+        double arg = parse_expression(expression, i);
+        if (i < expression.length() && expression[i] == ')') {
+          i++;
+          result = sin(arg);
+        } else {
+          std::cerr << "Error: Unbalanced parentheses after 'sin' argument" << std::endl;
+          return std::numeric_limits<double>::quiet_NaN();
+        }
+      } else if (func_name == "sqrt") {
+        // Обработка функции квадратного корня
+        if (expression[i] != '(') {
+          std::cerr << "Error: Expected '(' after 'sqrt'" << std::endl;
+          return std::numeric_limits<double>::quiet_NaN();
+        }
+        i++;
+        double arg = parse_expression(expression, i);
+        if (arg < 0) {
+          std::cerr << "Error: Square root of a negative number" << std::endl;
+          return std::numeric_limits<double>::quiet_NaN();
+        }
+        if (i < expression.length() && expression[i] == ')') {
+          i++;
+          result = sqrt(arg);
+        } else {
+          std::cerr << "Error: Unbalanced parentheses after 'sqrt' argument" << std::endl;
+          return std::numeric_limits<double>::quiet_NaN();
+        }
+      } else if (func_name == "log") {
+        // Обработка функции логарифма
+        if (expression[i] != '(') {
+          std::cerr << "Error: Expected '(' after 'log'" << std::endl;
+          return std::numeric_limits<double>::quiet_NaN();
+        }
+        i++;
+        double arg = parse_expression(expression, i);
+        if (arg <= 0) {
+          std::cerr << "Error: Logarithm of a non-positive number" << std::endl;
+          return std::numeric_limits<double>::quiet_NaN();
+        }
+        if (i < expression.length() && expression[i] == ')') {
+          i++;
+          result = log(arg);
+        } else {
+          std::cerr << "Error: Unbalanced parentheses after 'log' argument" << std::endl;
+          return std::numeric_limits<double>::quiet_NaN();
+        }
+      } else {
+        std::cerr << "Error: Unknown function '" << func_name << "'" << std::endl;
+        return std::numeric_limits<double>::quiet_NaN();
+      }
     } else {
       std::cerr << "Error: Invalid expression" << std::endl;
       return std::numeric_limits<double>::quiet_NaN();

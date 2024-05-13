@@ -45,9 +45,9 @@ int main() {
   std::string username, password;
 
   while (true) {
-    std::cout << "Enter 'register' to create a new account, 'login' to login, "
-                 "'history' to view your history, 'calculate' to be able to "
-                 "calculate an algebraic expression or 'exit' to quit: ";
+    std::cout << "▶ Enter 'register'📝 to create a new account, 'login'👤 to login, "
+                 "'history'🔎 to view your history, 'calculate'🧮 to be able to "
+                 "calculate an algebraic expression or 'exit'🚪 to quit: ";
     std::cin >>
         command;  //На самом деле нет команды calculate, просто что-либо отличное от перечисленных
 
@@ -57,16 +57,16 @@ int main() {
       break;
     } else if (command == "register") {
       // Регистрация нового пользователя
-      std::cout << "Enter username: ";
+      std::cout << "▶ Enter username: ";
       std::cin >> username;
-      std::cout << "Enter password: ";
+      std::cout << "▶ Enter password: ";
       std::cin >> password;
       register_user(client_socket, username, password);
     } else if (command == "login") {
       // Вход пользователя
-      std::cout << "Enter username: ";
+      std::cout << "▶ Enter username: ";
       std::cin >> username;
-      std::cout << "Enter password: ";
+      std::cout << "▶ Enter password: ";
       std::cin >> password;
       login_user(client_socket, username, password);
     } else if (command == "history") {
@@ -76,8 +76,8 @@ int main() {
       // Обработка алгебраического выражения
       std::string expression;
       std::cin.ignore();  // Очищаем буфер ввода
-      std::cout << "Enter an expression to evaluate (e.g., '2+2', '3*4', "
-                   "etc.), or 'exit' to quit: ";
+      std::cout << "▶ Enter an expression to calculate (e.g., '2+2*2', 'sin(0.5)', "
+                   "etc.), or 'exit'🚪 to quit: ";
       std::getline(std::cin, expression);
       send_request(client_socket, expression);
     }
@@ -85,7 +85,7 @@ int main() {
 
   close(client_socket);
   // Выводим сообщение об отключении от сервера
-  std::cout << "Disconnected from server" << std::endl;
+  std::cout << "▶ Disconnected from server" << std::endl;
   return 0;
 }
 
@@ -95,7 +95,7 @@ void send_request(int client_socket, const std::string& request) {
   send(client_socket, request.c_str(), request.length(), 0);
   recv(client_socket, buffer, 1024, 0);
   if (request != "EXIT") {
-    std::cout << "Result: " << buffer << std::endl;
+    std::cout << "▶ Result: " << buffer << std::endl;
   }
 }
 

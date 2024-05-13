@@ -122,7 +122,7 @@ void handle_request(int client_socket, sqlite3* db) {
               &client_addr_len);
 
   // Выводим сообщение о подключении клиента
-  std::cout << "Client connected. Address: "
+  std::cout << "🟢 Client connected. Address: "
             << inet_ntoa(client_address.sin_addr)
             << ", Port: " << ntohs(client_address.sin_port) << std::endl;
 
@@ -204,7 +204,7 @@ void handle_request(int client_socket, sqlite3* db) {
     } else if (command == "EXIT") {
       // Если получена команда на отключение, закрываем соединение с клиентом и завершаем обработку запросов
       close(client_socket);
-      std::cout << "Client disconnected. Address: "
+      std::cout << "🔴 Client disconnected. Address: "
                 << inet_ntoa(client_address.sin_addr)
                 << ", Port: " << ntohs(client_address.sin_port) << std::endl;
       return;

@@ -84,7 +84,7 @@ double parse_factor(const std::string& expression, int& i) {
       size_t func_end = expression.find_first_of("()", i);
       std::string func_name = expression.substr(i, func_end - i);
       i = func_end;
-      
+
       if (func_name == "sin") {
         // Обработка функции синуса
         if (expression[i] != '(') {
@@ -97,7 +97,8 @@ double parse_factor(const std::string& expression, int& i) {
           i++;
           result = sin(arg);
         } else {
-          std::cerr << "Error: Unbalanced parentheses after 'sin' argument" << std::endl;
+          std::cerr << "Error: Unbalanced parentheses after 'sin' argument"
+                    << std::endl;
           return std::numeric_limits<double>::quiet_NaN();
         }
       } else if (func_name == "sqrt") {
@@ -116,7 +117,8 @@ double parse_factor(const std::string& expression, int& i) {
           i++;
           result = sqrt(arg);
         } else {
-          std::cerr << "Error: Unbalanced parentheses after 'sqrt' argument" << std::endl;
+          std::cerr << "Error: Unbalanced parentheses after 'sqrt' argument"
+                    << std::endl;
           return std::numeric_limits<double>::quiet_NaN();
         }
       } else if (func_name == "log") {
@@ -135,11 +137,13 @@ double parse_factor(const std::string& expression, int& i) {
           i++;
           result = log(arg);
         } else {
-          std::cerr << "Error: Unbalanced parentheses after 'log' argument" << std::endl;
+          std::cerr << "Error: Unbalanced parentheses after 'log' argument"
+                    << std::endl;
           return std::numeric_limits<double>::quiet_NaN();
         }
       } else {
-        std::cerr << "Error: Unknown function '" << func_name << "'" << std::endl;
+        std::cerr << "Error: Unknown function '" << func_name << "'"
+                  << std::endl;
         return std::numeric_limits<double>::quiet_NaN();
       }
     } else {
